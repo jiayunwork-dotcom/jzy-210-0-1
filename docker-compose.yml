@@ -1,0 +1,41 @@
+services:
+  mysql:
+    image: mysql:8.0
+    command:
+      - --server-id=1
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpw
+      MYSQL_DATABASE: balancer
+      MYSQL_USER: balancer
+      MYSQL_PASSWORD: balancer
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-prootpw"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  balancer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      HTTP_ADDR: ":8080"
+      BALANCER_STORE: "mysql"
+      MYSQL_DSN: "balancer:balancer@tcp(mysql:3306)/balancer?charset=utf8mb4&collation=utf8mb4_unicode_ci&parseTime=true"
+      MIGRATIONS_DIR: "/app/migrations"
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  mysql-data:
