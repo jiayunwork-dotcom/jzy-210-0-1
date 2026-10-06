@@ -1,0 +1,39 @@
+services:
+  db:
+    image: mysql:8.0
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpw
+      MYSQL_DATABASE: balancing
+      MYSQL_USER: balancer
+      MYSQL_PASSWORD: balancer
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-pbalancer"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      HTTP_ADDR: ":8080"
+      BACKEND: "mysql"
+      MYSQL_HOST: "db"
+      MYSQL_PORT: "3306"
+      MYSQL_USER: "balancer"
+      MYSQL_PASSWORD: "balancer"
+      MYSQL_DATABASE: "balancing"
+    ports:
+      - "8080:8080"
+
+volumes:
+  db_data:
